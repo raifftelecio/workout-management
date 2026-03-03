@@ -31,7 +31,7 @@ alwaysApply: false
 - Nunca usar Zod v3
 
 - Sempre criar schemas de criação e atualização em `src/schemas/index.ts`
-- Sempre usar `z.enum(WeekDay)` importado de `../generated/prisma/enums.js` para campos de dia da semana
+- Sempre usar `z.enum(WeekDay)` importado de `../generated/prisma/enums.js` (ou `../generated/prisma/enums` conforme o contexto) para qualquer campo que represente dia da semana (`weekDay` ou equivalente), em request e response
 - Nunca usar `z.string()` para representar `WeekDay`
 
 - Sempre usar `src/schemas/index.ts` para tipar respostas de erro
