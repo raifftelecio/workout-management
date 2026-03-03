@@ -1,0 +1,82 @@
+---
+description: Regras de arquitetura, rotas Fastify, use cases e organização do projeto
+globs:
+  - "src/**/*.ts"
+alwaysApply: false
+---
+
+# Arquitetura
+
+## Estrutura de Diretórios
+
+- `src/` contém o código fonte da aplicação
+- `src/lib/db.ts` contém o setup do client do banco com Prisma e pg adapter
+- `src/entities/` contém interfaces TypeScript para entidades de domínio
+- `src/errors/` contém classes de erro customizadas
+- `src/schemas/` contém schemas Zod de validação de request e response
+- `src/usecases/` contém classes de lógica de negócio no padrão use case
+- `src/generated/` contém o Prisma Client gerado automaticamente
+- `prisma/` contém schema e migrations do Prisma
+
+# Regras para Rotas Fastify
+
+- Sempre seguir princípios REST ao criar rotas
+- Exemplos:
+  - `GET /workout-plans`
+  - `GET /workout-plans/:id/days`
+
+- Sempre criar arquivos de rota em `src/routes`
+- Sempre usar `fastify-type-provider-zod` para schemas de request e response
+- Sempre usar Zod v4
+- Nunca usar Zod v3
+
+- Sempre criar schemas de criação e atualização em `src/schemas/index.ts`
+- Sempre usar `z.enum(WeekDay)` importado de `../generated/prisma/enums.js` para campos de dia da semana
+- Nunca usar `z.string()` para representar `WeekDay`
+
+- Sempre usar `src/schemas/index.ts` para tipar respostas de erro
+
+- Uma rota nunca deve conter regra de negócio
+- A rota deve conter apenas:
+  - validação de dados com Zod
+  - autenticação, se necessário
+  - instanciação do use case
+  - tratamento de erros do use case
+
+- Quando a rota for protegida, sempre usar `auth.api.getSession` de `src/lib/auth.ts` para recuperar a sessão
+
+- Uma rota deve sempre instanciar e chamar um use case
+- Sempre tratar os erros lançados pelo use case
+- Sempre incluir `tags` e `summary` no schema da rota para Swagger/OpenAPI
+
+# Regras para Use Cases
+
+- Toda regra de negócio deve ficar em `src/usecases`
+- Todo use case deve ser uma classe
+- Todo use case deve ter um método `execute`
+- Todo use case deve ser nomeado com verbos
+
+- Quando um use case receber parâmetros, sempre receber um `InputDto`
+- `InputDto` deve ser uma interface definida no mesmo arquivo
+
+- O retorno de um use case deve sempre ser tipado com `OutputDto`
+- `OutputDto` deve ser uma interface definida no mesmo arquivo
+
+- O use case deve mapear o resultado do banco para o `OutputDto`
+- Nunca retornar diretamente o model do Prisma
+
+- Ao interagir com banco, o use case deve usar Prisma diretamente
+- Não usar repository nesse projeto, a menos que o usuário peça explicitamente uma mudança arquitetural
+
+- Nunca usar `try/catch` dentro do use case
+- Quem trata erros é sempre a rota em `src/routes`
+
+- Se um use case precisar lançar erro, sempre usar erro customizado de `src/errors/index.ts`
+- Se o erro ainda não existir, criar um novo erro customizado
+
+# Padrão de Implementação
+
+- Antes de criar novo arquivo, verificar se já existe estrutura semelhante no projeto
+- Reaproveitar padrões já existentes
+- Manter consistência com a organização atual
+- Em operações que exigem atomicidade, preferir `prisma.$transaction`

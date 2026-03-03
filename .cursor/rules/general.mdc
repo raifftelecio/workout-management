@@ -1,0 +1,57 @@
+---
+alwaysApply: true
+---
+
+---
+
+## description: Regras gerais do projeto de gestão de treinos
+
+# Stack
+
+- Node.js com ES Modules
+- pnpm como package manager
+- TypeScript com target ES2024
+- Fastify com `fastify-type-provider-zod`
+- Prisma ORM com PostgreSQL usando pg adapter
+- `better-auth` para autenticação
+- Zod v4
+
+# Comandos
+
+## Desenvolvimento
+
+- `pnpm dev` inicia o servidor em modo watch
+
+## Build
+
+- `pnpm build` executa o build com tsup
+
+## Banco de dados
+
+- `pnpm prisma generate` gera o Prisma Client
+- `pnpm prisma migrate dev` executa migrations em desenvolvimento
+- `pnpm prisma studio` abre o Prisma Studio
+
+## Linting
+
+- `pnpm eslint .` executa o ESLint
+
+# Documentação da API
+
+- Swagger UI disponível em `/docs`
+- Considerar a porta `4949` quando o servidor estiver rodando
+
+# MCPs
+
+- Sempre usar Context7 para buscar documentações
+- Sempre usar Serena para semantic code retrieval e análise estrutural do projeto
+
+# Git
+
+- Sempre usar Conventional Commits
+- Exemplos:
+  - `feat: add start workout session endpoint`
+  - `fix: workout plan validation`
+  - `docs: update architecture rules`
+- Nunca fazer commit sem a permissão explícita do usuário
+- Se o usuário não pedir commit, apenas preparar as alterações e sugerir uma mensagem de commit

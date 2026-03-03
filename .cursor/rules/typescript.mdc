@@ -1,0 +1,49 @@
+---
+description: Convenções de TypeScript, nomenclatura, funções, datas e validação
+globs:
+  - "**/*.ts"
+alwaysApply: false
+---
+
+# Regras TypeScript
+
+## Princípios Básicos
+
+- Sempre usar TypeScript
+- Nunca usar JavaScript neste projeto
+- Nunca usar `any`
+- Sempre preferir named exports ao invés de default exports, exceto quando estritamente necessário
+
+## Funções
+
+- Sempre preferir arrow functions ao invés de funções convencionais, exceto quando estritamente necessário
+- Sempre nomear funções como verbos
+- Sempre preferir early return em vez de ifs muito aninhados
+- Priorizar higher-order functions em vez de loops, quando isso melhorar clareza
+- Ao receber mais de 2 parâmetros, preferir um objeto como argumento
+
+## Nomenclatura
+
+- Sempre preferir `interface` ao invés de `type`, exceto quando estritamente necessário
+- Sempre usar kebab-case para nome de arquivos
+- Exceção: use cases podem usar PascalCase
+- Sempre usar PascalCase para classes
+- Sempre usar camelCase para variáveis, funções e métodos
+
+## Datas
+
+- Sempre usar `dayjs` para manipulação e formatação de datas
+
+## Zod
+
+- Sempre usar Zod v4
+- Usar os validadores mais específicos possíveis
+- Preferir:
+  - `z.url()`
+  - `z.date()`
+  - `z.iso.date()`
+  - `z.iso.datetime()`
+  - `z.iso.time()`
+  - `z.iso.duration()`
+
+- Nunca usar regex manual para validar datas ISO quando houver validador nativo do Zod
