@@ -53,5 +53,5 @@ alwaysApply: true
   - `feat: add start workout session endpoint`
   - `fix: workout plan validation`
   - `docs: update architecture rules`
-- Nunca fazer commit sem a permissão explícita do usuário
+- Nunca fazer commit sem a permissão explícita do usuário; só commitar quando o usuário pedir
 - Se o usuário não pedir commit, apenas preparar as alterações e sugerir uma mensagem de commit
