@@ -87,6 +87,25 @@ export const UpdateWorkoutSessionResponseSchema = z.object({
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
+export const GetStatsQuerySchema = z.object({
+  from: z.iso.date(),
+  to: z.iso.date(),
+});
+
+export const GetStatsResponseSchema = z.object({
+  workoutStreak: z.number(),
+  consistencyByDay: z.record(
+    z.iso.date(),
+    z.object({
+      workoutDayCompleted: z.boolean(),
+      workoutDayStarted: z.boolean(),
+    }),
+  ),
+  completedWorkoutsCount: z.number(),
+  conclusionRate: z.number(),
+  totalTimeInSeconds: z.number(),
+});
+
 export const GetHomeParamsSchema = z.object({
   date: z.string().regex(DATE_REGEX, "Date must be YYYY-MM-DD"),
 });
@@ -107,7 +126,7 @@ export const GetHomeResponseSchema = z.object({
     .nullable(),
   workoutStreak: z.number(),
   consistencyByDay: z.record(
-    z.string(),
+    z.iso.date(),
     z.object({
       workoutDayCompleted: z.boolean(),
       workoutDayStarted: z.boolean(),
