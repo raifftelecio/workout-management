@@ -14,6 +14,7 @@ import z from "zod";
 
 import { auth } from "./lib/auth.js";
 import { homeRoutes } from "./routes/home.js";
+import { meRoutes } from "./routes/me.js";
 import { statsRoutes } from "./routes/stats.js";
 import { workoutPlanRoutes } from "./routes/workout-plan.js";
 
@@ -71,6 +72,7 @@ await app.register(fastifyApiReference, {
 });
 
 //Routes
+await app.register(meRoutes);
 await app.register(homeRoutes, { prefix: "/home" });
 await app.register(statsRoutes, { prefix: "/stats" });
 await app.register(workoutPlanRoutes, { prefix: "/workout-plans" });
