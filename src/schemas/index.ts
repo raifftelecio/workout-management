@@ -175,6 +175,6 @@ export const GetMeResponseSchema = z
     weightInGrams: z.number(),
     heightInCentimeters: z.number(),
     age: z.number(),
-    bodyFatPercentage: z.number(), // 1 representa 100%
+    bodyFatPercentage: z.number().int().min(0).max(100),
   })
   .nullable();

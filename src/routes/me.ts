@@ -2,8 +2,8 @@ import { fromNodeHeaders } from "better-auth/node";
 import { FastifyInstance } from "fastify";
 import { ZodTypeProvider } from "fastify-type-provider-zod";
 
-import { ErrorSchema, GetMeResponseSchema } from "../schemas/index.js";
 import { auth } from "../lib/auth.js";
+import { ErrorSchema, GetMeResponseSchema } from "../schemas/index.js";
 import { GetUserTrainData } from "../usecases/GetUserTrainData.js";
 
 export const meRoutes = async (app: FastifyInstance) => {
