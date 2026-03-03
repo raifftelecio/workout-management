@@ -5,7 +5,7 @@ interface InputDto {
   weightInGrams: number;
   heightInCentimeters: number;
   age: number;
-  bodyFatPercentage: number; // inteiro 0-100 (ex.: 100, 50)
+  bodyFatPercentage: number; // inteiro 0-100 (100 representa 100%)
 }
 
 export interface OutputDto {
@@ -13,7 +13,7 @@ export interface OutputDto {
   weightInGrams: number;
   heightInCentimeters: number;
   age: number;
-  bodyFatPercentage: number; // inteiro 0-100
+  bodyFatPercentage: number; // inteiro 0-100 (100 representa 100%)
 }
 
 export class UpsertUserTrainData {
