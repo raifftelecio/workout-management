@@ -78,6 +78,7 @@ await app.register(meRoutes);
 await app.register(homeRoutes, { prefix: "/home" });
 await app.register(statsRoutes, { prefix: "/stats" });
 await app.register(workoutPlanRoutes, { prefix: "/workout-plans" });
+await app.register(aiRoutes, { prefix: "/ai" });
 
 app.withTypeProvider<ZodTypeProvider>().route({
   method: "GET",

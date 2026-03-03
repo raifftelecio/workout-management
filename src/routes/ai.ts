@@ -8,10 +8,12 @@ import {
 } from "ai";
 import { fromNodeHeaders } from "better-auth/node";
 import { FastifyInstance } from "fastify";
+import { ZodTypeProvider } from "fastify-type-provider-zod";
 import z from "zod";
 
 import { WeekDay } from "../generated/prisma/enums.js";
 import { auth } from "../lib/auth.js";
+import { ErrorSchema } from "../schemas/index.js";
 import { CreateWorkoutPlan } from "../usecases/CreateWorkoutPlan.js";
 import { GetUserTrainData } from "../usecases/GetUserTrainData.js";
 import { ListWorkoutPlans } from "../usecases/ListWorkoutPlans.js";
@@ -56,119 +58,157 @@ const SYSTEM_PROMPT = `Você é um personal trainer virtual especialista em mont
 
 Seja sempre breve e objetivo nas respostas.`;
 
+const PostAiBodySchema = z.object({
+  messages: z
+    .array(z.record(z.string(), z.unknown()))
+    .describe("Histórico de mensagens do chat"),
+});
+
 export const aiRoutes = async (app: FastifyInstance) => {
-  app.post("/ai", async function (request, reply) {
-    const session = await auth.api.getSession({
-      headers: fromNodeHeaders(request.headers),
-    });
-    if (!session) {
-      return reply.status(401).send({ message: "Unauthorized" });
-    }
-    const userId = session.user.id;
-    const { messages } = request.body as { messages: UIMessage[] };
-    const result = streamText({
-      model: openai("gpt-4o-mini"),
-      system: SYSTEM_PROMPT,
-      tools: {
-        getUserTrainData: tool({
-          description: "Busca os dados de treino do usuário. Chame SEMPRE antes de qualquer interação.",
-          inputSchema: z.object({}),
-          execute: async () => {
-            const useCase = new GetUserTrainData();
-            return useCase.execute({ userId });
-          },
-        }),
-        updateUserTrainData: tool({
-          description: "Cria ou atualiza os dados de treino do usuário (peso em gramas, altura em cm, idade, % gordura 0-100)",
-          inputSchema: z.object({
-            weightInGrams: z.number().describe("Peso em gramas (ex.: 70000 para 70 kg)"),
-            heightInCentimeters: z.number().describe("Altura em centímetros"),
-            age: z.number().describe("Idade em anos"),
-            bodyFatPercentage: z.number().int().min(0).max(100).describe("Percentual de gordura corporal: inteiro 0-100 (100 representa 100%)"),
-          }),
-          execute: async (input) => {
-            const useCase = new UpsertUserTrainData();
-            return useCase.execute({
-              userId,
-              weightInGrams: input.weightInGrams,
-              heightInCentimeters: input.heightInCentimeters,
-              age: input.age,
-              bodyFatPercentage: input.bodyFatPercentage,
-            });
-          },
-        }),
-        getWorkoutPlans: tool({
-          description: "Lista os planos de treino do usuário",
-          inputSchema: z.object({}),
-          execute: async () => {
-            const useCase = new ListWorkoutPlans();
-            return useCase.execute({ userId });
-          },
-        }),
-        createWorkoutPlan: tool({
-          description: "Cria um novo plano de treino completo com exatamente 7 dias (MONDAY a SUNDAY)",
-          inputSchema: z.object({
-            name: z.string().describe("Nome do plano de treino"),
-            workoutDays: z
-              .array(
-                z.object({
-                  name: z
-                    .string()
-                    .describe("Nome do dia (ex: Peito e Tríceps, Descanso)"),
-                  weekDay: z.enum(WeekDay).describe("Dia da semana"),
-                  isRest: z
-                    .boolean()
-                    .describe("Se é dia de descanso (true) ou treino (false)"),
-                  estimatedDurationInSeconds: z
-                    .number()
-                    .describe(
-                      "Duração estimada em segundos (0 para dias de descanso)",
-                    ),
-                  coverImageUrl: z
-                    .string()
-                    .url()
-                    .describe(
-                      "URL da imagem de capa. Use as URLs de superior ou inferior conforme o foco muscular do dia.",
-                    ),
-                  exercises: z
-                    .array(
-                      z.object({
-                        order: z.number().describe("Ordem do exercício no dia"),
-                        name: z.string().describe("Nome do exercício"),
-                        sets: z.number().describe("Número de séries"),
-                        reps: z.number().describe("Número de repetições"),
-                        restTimeInSeconds: z
-                          .number()
-                          .describe(
-                            "Tempo de descanso entre séries em segundos",
-                          ),
-                      }),
-                    )
-                    .describe(
-                      "Lista de exercícios (vazia para dias de descanso)",
-                    ),
-                }),
-              )
-              .describe(
-                "Array com exatamente 7 dias de treino (MONDAY a SUNDAY)",
-              ),
-          }),
-          execute: async (input) => {
-            const createWorkoutPlan = new CreateWorkoutPlan();
-            return createWorkoutPlan.execute({
-              userId,
-              name: input.name,
-              workoutDays: input.workoutDays,
-            });
-          },
-        }),
+  app.withTypeProvider<ZodTypeProvider>().route({
+    method: "POST",
+    url: "/",
+    schema: {
+      tags: ["ai"],
+      summary: "Chat com personal trainer virtual (streaming)",
+      body: PostAiBodySchema,
+      response: {
+        200: z.any(),
+        401: ErrorSchema,
       },
-      stopWhen: stepCountIs(5),
-      messages: await convertToModelMessages(messages),
-    });
-    const response = result.toUIMessageStreamResponse();
-    reply.status(response.status);
-    response.headers.forEach((value, key) => reply.header(key, value));
-    return reply.send(response.body);
+    },
+    handler: async (request, reply) => {
+      const session = await auth.api.getSession({
+        headers: fromNodeHeaders(request.headers),
+      });
+      if (!session) {
+        return reply.status(401).send({
+          error: "Unauthorized",
+          code: "UNAUTHORIZED",
+        });
+      }
+      const userId = session.user.id;
+      const { messages } = request.body as unknown as { messages: UIMessage[] };
+      const result = streamText({
+        model: openai("gpt-4o-mini"),
+        system: SYSTEM_PROMPT,
+        tools: {
+          getUserTrainData: tool({
+            description:
+              "Busca os dados de treino do usuário. Chame SEMPRE antes de qualquer interação.",
+            inputSchema: z.object({}),
+            execute: async () => {
+              const useCase = new GetUserTrainData();
+              return useCase.execute({ userId });
+            },
+          }),
+          updateUserTrainData: tool({
+            description:
+              "Cria ou atualiza os dados de treino do usuário (peso em gramas, altura em cm, idade, % gordura 0-100)",
+            inputSchema: z.object({
+              weightInGrams: z
+                .number()
+                .describe("Peso em gramas (ex.: 70000 para 70 kg)"),
+              heightInCentimeters: z.number().describe("Altura em centímetros"),
+              age: z.number().describe("Idade em anos"),
+              bodyFatPercentage: z
+                .number()
+                .int()
+                .min(0)
+                .max(100)
+                .describe(
+                  "Percentual de gordura corporal: inteiro 0-100 (100 representa 100%)",
+                ),
+            }),
+            execute: async (input) => {
+              const useCase = new UpsertUserTrainData();
+              return useCase.execute({
+                userId,
+                weightInGrams: input.weightInGrams,
+                heightInCentimeters: input.heightInCentimeters,
+                age: input.age,
+                bodyFatPercentage: input.bodyFatPercentage,
+              });
+            },
+          }),
+          getWorkoutPlans: tool({
+            description: "Lista os planos de treino do usuário",
+            inputSchema: z.object({}),
+            execute: async () => {
+              const useCase = new ListWorkoutPlans();
+              return useCase.execute({ userId });
+            },
+          }),
+          createWorkoutPlan: tool({
+            description:
+              "Cria um novo plano de treino completo com exatamente 7 dias (MONDAY a SUNDAY)",
+            inputSchema: z.object({
+              name: z.string().describe("Nome do plano de treino"),
+              workoutDays: z
+                .array(
+                  z.object({
+                    name: z
+                      .string()
+                      .describe("Nome do dia (ex: Peito e Tríceps, Descanso)"),
+                    weekDay: z.enum(WeekDay).describe("Dia da semana"),
+                    isRest: z
+                      .boolean()
+                      .describe(
+                        "Se é dia de descanso (true) ou treino (false)",
+                      ),
+                    estimatedDurationInSeconds: z
+                      .number()
+                      .describe(
+                        "Duração estimada em segundos (0 para dias de descanso)",
+                      ),
+                    coverImageUrl: z
+                      .string()
+                      .url()
+                      .describe(
+                        "URL da imagem de capa. Use as URLs de superior ou inferior conforme o foco muscular do dia.",
+                      ),
+                    exercises: z
+                      .array(
+                        z.object({
+                          order: z
+                            .number()
+                            .describe("Ordem do exercício no dia"),
+                          name: z.string().describe("Nome do exercício"),
+                          sets: z.number().describe("Número de séries"),
+                          reps: z.number().describe("Número de repetições"),
+                          restTimeInSeconds: z
+                            .number()
+                            .describe(
+                              "Tempo de descanso entre séries em segundos",
+                            ),
+                        }),
+                      )
+                      .describe(
+                        "Lista de exercícios (vazia para dias de descanso)",
+                      ),
+                  }),
+                )
+                .describe(
+                  "Array com exatamente 7 dias de treino (MONDAY a SUNDAY)",
+                ),
+            }),
+            execute: async (input) => {
+              const createWorkoutPlan = new CreateWorkoutPlan();
+              return createWorkoutPlan.execute({
+                userId,
+                name: input.name,
+                workoutDays: input.workoutDays,
+              });
+            },
+          }),
+        },
+        stopWhen: stepCountIs(5),
+        messages: await convertToModelMessages(messages),
+      });
+      const response = result.toUIMessageStreamResponse();
+      reply.status(response.status as 200 | 401);
+      response.headers.forEach((value, key) => reply.header(key, value));
+      return reply.send(response.body);
+    },
   });
 };
