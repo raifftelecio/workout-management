@@ -7,6 +7,13 @@ export const ErrorSchema = z.object({
   code: z.string(),
 });
 
+export const ListWorkoutPlansQuerySchema = z.object({
+  active: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((s) => (s === undefined ? undefined : s === "true")),
+});
+
 export const GetWorkoutPlanParamsSchema = z.object({
   id: z.uuid(),
 });
@@ -158,3 +165,5 @@ export const WorkoutPlanSchema = z.object({
     }),
   ),
 });
+
+export const ListWorkoutPlansResponseSchema = z.array(WorkoutPlanSchema);

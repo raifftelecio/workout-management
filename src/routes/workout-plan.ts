@@ -14,6 +14,8 @@ import {
   GetWorkoutDayResponseSchema,
   GetWorkoutPlanParamsSchema,
   GetWorkoutPlanResponseSchema,
+  ListWorkoutPlansQuerySchema,
+  ListWorkoutPlansResponseSchema,
   StartWorkoutSessionParamsSchema,
   StartWorkoutSessionResponseSchema,
   UpdateWorkoutSessionBodySchema,
@@ -33,6 +35,10 @@ import {
   GetWorkoutPlan,
   type OutputDto as GetWorkoutPlanOutputDto,
 } from "../usecases/GetWorkoutPlan.js";
+import {
+  ListWorkoutPlans,
+  type OutputDto as ListWorkoutPlanItemDto,
+} from "../usecases/ListWorkoutPlans.js";
 import {
   type OutputDto as StartWorkoutSessionOutputDto,
   StartWorkoutSession,
@@ -84,6 +90,47 @@ export const workoutPlanRoutes = async (app: FastifyInstance) => {
             code: "NOT_FOUND_ERROR",
           });
         }
+        return reply.status(500).send({
+          error: "Internal server error",
+          code: "INTERNAL_SERVER_ERROR",
+        });
+      }
+    },
+  });
+
+  app.withTypeProvider<ZodTypeProvider>().route({
+    method: "GET",
+    url: "/",
+    schema: {
+      tags: ["workout-plan"],
+      summary: "Lista planos de treino do usuário",
+      querystring: ListWorkoutPlansQuerySchema,
+      response: {
+        200: ListWorkoutPlansResponseSchema,
+        401: ErrorSchema,
+        500: ErrorSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const session = await auth.api.getSession({
+          headers: fromNodeHeaders(request.headers),
+        });
+        if (!session) {
+          return reply.status(401).send({
+            error: "Unautorized",
+            code: "UNAUTHORIZED",
+          });
+        }
+        const listWorkoutPlans = new ListWorkoutPlans();
+        const result: ListWorkoutPlanItemDto[] =
+          await listWorkoutPlans.execute({
+            userId: session.user.id,
+            active: request.query.active,
+          });
+        return reply.status(200).send(result);
+      } catch (error) {
+        app.log.error(error);
         return reply.status(500).send({
           error: "Internal server error",
           code: "INTERNAL_SERVER_ERROR",
