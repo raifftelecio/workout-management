@@ -5,16 +5,16 @@ export class NotFoundError extends Error {
   }
 }
 
-// export class WorkoutPlanNotActiveError extends Error {
-//   constructor(message: string) {
-//     super(message);
-//     this.name = "WorkoutPlanNotActiveError";
-//   }
-// }
+export class WorkoutPlanNotActiveError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "WorkoutPlanNotActiveError";
+  }
+}
 
-// export class SessionAlreadyStartedError extends Error {
-//   constructor(message: string) {
-//     super(message);
-//     this.name = "SessionAlreadyStartedError";
-//   }
-// }
+export class SessionAlreadyStartedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SessionAlreadyStartedError";
+  }
+}
