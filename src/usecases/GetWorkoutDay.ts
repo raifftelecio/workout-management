@@ -1,8 +1,11 @@
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
 
 import { NotFoundError } from "../errors/index.js";
-import type { WeekDay } from "../generated/prisma/enums.js";
+import { WeekDay } from "../generated/prisma/enums.js";
 import { prisma } from "../lib/db.js";
+
+dayjs.extend(utc);
 
 interface InputDto {
   userId: string;
@@ -10,84 +13,74 @@ interface InputDto {
   workoutDayId: string;
 }
 
-export interface ExerciseItemDto {
-  id: string;
-  name: string;
-  order: number;
-  workoutDayId: string;
-  sets: number;
-  reps: number;
-  restTimeInSeconds: number;
-}
-
-export interface SessionItemDto {
-  id: string;
-  workoutDayId: string;
-  startedAt: string;
-  completedAt?: string;
-}
-
-export interface OutputDto {
+interface OutputDto {
   id: string;
   name: string;
   isRest: boolean;
   coverImageUrl?: string;
   estimatedDurationInSeconds: number;
-  exercises: ExerciseItemDto[];
   weekDay: WeekDay;
-  sessions: SessionItemDto[];
+  exercises: Array<{
+    id: string;
+    name: string;
+    order: number;
+    workoutDayId: string;
+    sets: number;
+    reps: number;
+    restTimeInSeconds: number;
+  }>;
+  sessions: Array<{
+    id: string;
+    workoutDayId: string;
+    startedAt?: string;
+    completedAt?: string;
+  }>;
 }
 
 export class GetWorkoutDay {
   async execute(dto: InputDto): Promise<OutputDto> {
-    const plan = await prisma.workoutPlan.findUnique({
+    const workoutPlan = await prisma.workoutPlan.findUnique({
       where: { id: dto.workoutPlanId },
+    });
+
+    if (!workoutPlan || workoutPlan.userId !== dto.userId) {
+      throw new NotFoundError("Workout plan not found");
+    }
+
+    const workoutDay = await prisma.workoutDay.findUnique({
+      where: { id: dto.workoutDayId, workoutPlanId: dto.workoutPlanId },
       include: {
-        workoutDays: {
-          where: { id: dto.workoutDayId },
-          include: {
-            exercises: true,
-            sessions: true,
-          },
-        },
+        exercises: { orderBy: { order: "asc" } },
+        sessions: true,
       },
     });
 
-    if (!plan) {
-      throw new NotFoundError("Workout plan not found");
-    }
-
-    if (plan.userId !== dto.userId) {
-      throw new NotFoundError("Workout plan not found");
-    }
-
-    const day = plan.workoutDays[0];
-    if (!day) {
+    if (!workoutDay) {
       throw new NotFoundError("Workout day not found");
     }
 
     return {
-      id: day.id,
-      name: day.name,
-      isRest: day.isRest,
-      coverImageUrl: day.coverImageUrl ?? undefined,
-      estimatedDurationInSeconds: day.estimatedDurationInSeconds,
-      exercises: day.exercises.map((ex) => ({
-        id: ex.id,
-        name: ex.name,
-        order: ex.order,
-        workoutDayId: ex.workoutDayId,
-        sets: ex.sets,
-        reps: ex.reps,
-        restTimeInSeconds: ex.restTimeInSeconds,
+      id: workoutDay.id,
+      name: workoutDay.name,
+      isRest: workoutDay.isRest,
+      coverImageUrl: workoutDay.coverImageUrl ?? undefined,
+      estimatedDurationInSeconds: workoutDay.estimatedDurationInSeconds,
+      weekDay: workoutDay.weekDay,
+      exercises: workoutDay.exercises.map((exercise) => ({
+        id: exercise.id,
+        name: exercise.name,
+        order: exercise.order,
+        workoutDayId: exercise.workoutDayId,
+        sets: exercise.sets,
+        reps: exercise.reps,
+        restTimeInSeconds: exercise.restTimeInSeconds,
       })),
-      weekDay: day.weekDay,
-      sessions: day.sessions.map((s) => ({
-        id: s.id,
-        workoutDayId: s.workoutDayId,
-        startedAt: dayjs(s.startedAt).format("YYYY-MM-DD"),
-        completedAt: s.completedAt
-          ? dayjs(s.completedAt).format("YYYY-MM-DD")
+      sessions: workoutDay.sessions.map((session) => ({
+        id: session.id,
+        workoutDayId: session.workoutDayId,
+        startedAt: dayjs.utc(session.startedAt).format("YYYY-MM-DD"),
+        completedAt: session.completedAt
+          ? dayjs.utc(session.completedAt).format("YYYY-MM-DD")
           : undefined,
       })),
     };

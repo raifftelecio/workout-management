@@ -5,15 +5,15 @@ interface InputDto {
   weightInGrams: number;
   heightInCentimeters: number;
   age: number;
-  bodyFatPercentage: number; // inteiro 0-100 (100 representa 100%)
+  bodyFatPercentage: number;
 }
 
-export interface OutputDto {
+interface OutputDto {
   userId: string;
   weightInGrams: number;
   heightInCentimeters: number;
   age: number;
-  bodyFatPercentage: number; // inteiro 0-100 (100 representa 100%)
+  bodyFatPercentage: number;
 }
 
 export class UpsertUserTrainData {
@@ -30,10 +30,10 @@ export class UpsertUserTrainData {
 
     return {
       userId: user.id,
-      weightInGrams: user.weightInGrams ?? 0,
-      heightInCentimeters: user.heightInCentimeters ?? 0,
-      age: user.age ?? 0,
-      bodyFatPercentage: user.bodyFatPercentage ?? 0,
+      weightInGrams: user.weightInGrams!,
+      heightInCentimeters: user.heightInCentimeters!,
+      age: user.age!,
+      bodyFatPercentage: user.bodyFatPercentage!,
     };
   }
 }

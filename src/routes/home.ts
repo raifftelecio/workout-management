@@ -1,30 +1,28 @@
 import { fromNodeHeaders } from "better-auth/node";
 import { FastifyInstance } from "fastify";
 import { ZodTypeProvider } from "fastify-type-provider-zod";
+import z from "zod";
 
+import { NotFoundError } from "../errors/index.js";
 import { auth } from "../lib/auth.js";
-import {
-  ErrorSchema,
-  GetHomeParamsSchema,
-  GetHomeResponseSchema,
-} from "../schemas/index.js";
-import {
-  GetHomeData,
-  type OutputDto as GetHomeOutputDto,
-} from "../usecases/GetHomeData.js";
+import { ErrorSchema, HomeDataSchema } from "../schemas/index.js";
+import { GetHomeData } from "../usecases/GetHomeData.js";
 
 export const homeRoutes = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route({
     method: "GET",
     url: "/:date",
     schema: {
-      tags: ["home"],
-      summary: "Dados da página inicial do usuário",
-      params: GetHomeParamsSchema,
+      operationId: "getHomeData",
+      tags: ["Home"],
+      summary: "Get home page data",
+      params: z.object({
+        date: z.iso.date(),
+      }),
       response: {
-        200: GetHomeResponseSchema,
-        400: ErrorSchema,
+        200: HomeDataSchema,
         401: ErrorSchema,
+        404: ErrorSchema,
         500: ErrorSchema,
       },
     },
@@ -35,24 +33,28 @@ export const homeRoutes = async (app: FastifyInstance) => {
         });
         if (!session) {
           return reply.status(401).send({
-            error: "Unautorized",
+            error: "Unauthorized",
             code: "UNAUTHORIZED",
           });
         }
+
         const getHomeData = new GetHomeData();
-        const result: GetHomeOutputDto = await getHomeData.execute({
+        const result = await getHomeData.execute({
           userId: session.user.id,
           date: request.params.date,
         });
+
         return reply.status(200).send(result);
       } catch (error) {
         app.log.error(error);
-        if (error instanceof Error && error.message === "Invalid date format") {
-          return reply.status(400).send({
+
+        if (error instanceof NotFoundError) {
+          return reply.status(404).send({
             error: error.message,
-            code: "INVALID_DATE",
+            code: "NOT_FOUND_ERROR",
           });
         }
+
         return reply.status(500).send({
           error: "Internal server error",
           code: "INTERNAL_SERVER_ERROR",

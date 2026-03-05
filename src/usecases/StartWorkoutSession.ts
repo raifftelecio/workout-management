@@ -11,43 +11,41 @@ interface InputDto {
   workoutDayId: string;
 }
 
-export interface OutputDto {
+interface OutputDto {
   userWorkoutSessionId: string;
 }
 
 export class StartWorkoutSession {
   async execute(dto: InputDto): Promise<OutputDto> {
-    const plan = await prisma.workoutPlan.findUnique({
+    const workoutPlan = await prisma.workoutPlan.findUnique({
       where: { id: dto.workoutPlanId },
-      include: {
-        workoutDays: {
-          where: { id: dto.workoutDayId },
-          include: {
-            sessions: true,
-          },
-        },
-      },
     });
 
-    if (!plan) {
+    if (!workoutPlan) {
       throw new NotFoundError("Workout plan not found");
     }
 
-    if (plan.userId !== dto.userId) {
+    if (workoutPlan.userId !== dto.userId) {
       throw new NotFoundError("Workout plan not found");
     }
 
-    if (!plan.isActive) {
+    if (!workoutPlan.isActive) {
       throw new WorkoutPlanNotActiveError("Workout plan is not active");
     }
 
-    const day = plan.workoutDays[0];
-    if (!day) {
+    const workoutDay = await prisma.workoutDay.findUnique({
+      where: { id: dto.workoutDayId, workoutPlanId: dto.workoutPlanId },
+    });
+
+    if (!workoutDay) {
       throw new NotFoundError("Workout day not found");
     }
 
-    const hasStartedSession = day.sessions.length > 0;
-    if (hasStartedSession) {
+    const existingSession = await prisma.workoutSession.findFirst({
+      where: { workoutDayId: dto.workoutDayId },
+    });
+
+    if (existingSession) {
       throw new SessionAlreadyStartedError(
         "A session has already been started for this day",
       );

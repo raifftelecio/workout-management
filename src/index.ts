@@ -43,17 +43,11 @@ await app.register(fastifySwagger, {
   transform: jsonSchemaTransform,
 });
 
-//Preparo pro Front-End e para o playground de API (/docs)
 await app.register(fastifyCors, {
-  origin: [
-    "http://localhost:3000",
-    "http://localhost:8081",
-    "http://127.0.0.1:8081",
-  ],
+  origin: ["http://localhost:3000"],
   credentials: true,
 });
 
-// incluir este bloco
 await app.register(fastifyApiReference, {
   routePrefix: "/docs",
   configuration: {
@@ -72,10 +66,10 @@ await app.register(fastifyApiReference, {
   },
 });
 
-//Routes
-await app.register(aiRoutes);
-await app.register(meRoutes);
+// RESTful
+// Routes
 await app.register(homeRoutes, { prefix: "/home" });
+await app.register(meRoutes, { prefix: "/me" });
 await app.register(statsRoutes, { prefix: "/stats" });
 await app.register(workoutPlanRoutes, { prefix: "/workout-plans" });
 await app.register(aiRoutes, { prefix: "/ai" });
@@ -91,7 +85,6 @@ app.withTypeProvider<ZodTypeProvider>().route({
   },
 });
 
-//Rota de teste
 app.withTypeProvider<ZodTypeProvider>().route({
   method: "GET",
   url: "/",
@@ -114,6 +107,9 @@ app.withTypeProvider<ZodTypeProvider>().route({
 app.route({
   method: ["GET", "POST"],
   url: "/api/auth/*",
+  schema: {
+    hide: true,
+  },
   async handler(request, reply) {
     try {
       // Construct request URL
@@ -147,7 +143,7 @@ app.route({
 });
 
 try {
-  await app.listen({ port: Number(process.env.PORT || 8081) });
+  await app.listen({ port: Number(process.env.PORT) || 8081 });
 } catch (err) {
   app.log.error(err);
   process.exit(1);
